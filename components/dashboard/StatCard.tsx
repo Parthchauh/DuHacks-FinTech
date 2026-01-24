@@ -8,7 +8,7 @@ interface StatCardProps {
     title: string;
     value: string;
     change: string;
-    trend: 'up' | 'down' | 'neutral';
+    trend: string;  // 'up' | 'down' | 'neutral'
     icon: LucideIcon;
 }
 

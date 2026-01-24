@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { usePortfolioStore } from "@/lib/store";
+import { usePortfolioStore, formatCurrency, Trade } from "@/lib/store";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, CheckCircle2, Loader2, RefreshCw, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, RefreshCw, X, TrendingUp, TrendingDown } from "lucide-react";
 import confetti from "canvas-confetti";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface WizardProps {
     isOpen: boolean;
@@ -15,7 +15,7 @@ interface WizardProps {
 }
 
 export function RebalanceWizard({ isOpen, onClose }: WizardProps) {
-    const { trades, generateRebalancingPlan, executeTrades, isRebalancing } = usePortfolioStore();
+    const { trades, generateRebalancingPlan, executeTrades, isRebalancing, metrics } = usePortfolioStore();
     const [step, setStep] = useState(1);
     const [completed, setCompleted] = useState(false);
 
@@ -27,10 +27,11 @@ export function RebalanceWizard({ isOpen, onClose }: WizardProps) {
         }
     }, [isOpen, generateRebalancingPlan]);
 
-    const handleExecute = () => {
+    const handleExecute = async () => {
         setStep(2);
-        executeTrades();
-        setTimeout(() => {
+        const success = await executeTrades();
+        
+        if (success) {
             setStep(3);
             setCompleted(true);
             confetti({
@@ -39,8 +40,13 @@ export function RebalanceWizard({ isOpen, onClose }: WizardProps) {
                 origin: { y: 0.6 },
                 colors: ['#0ea5e9', '#d8b4fe', '#bbf7d0']
             });
-        }, 2000); // Sync with store's mock delay
+        } else {
+            setStep(1);
+        }
     };
+
+    const totalBuy = trades.filter(t => t.trade_type === "BUY").reduce((sum, t) => sum + t.trade_amount, 0);
+    const totalSell = trades.filter(t => t.trade_type === "SELL").reduce((sum, t) => sum + t.trade_amount, 0);
 
     if (!isOpen) return null;
 
@@ -52,7 +58,7 @@ export function RebalanceWizard({ isOpen, onClose }: WizardProps) {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
             >
-                <Card className="w-full max-w-2xl overflow-hidden shadow-2xl relative bg-white">
+                <Card className="w-full max-w-2xl overflow-hidden shadow-2xl relative bg-white max-h-[90vh] overflow-y-auto">
                     <Button
                         variant="ghost"
                         size="icon"
@@ -71,26 +77,59 @@ export function RebalanceWizard({ isOpen, onClose }: WizardProps) {
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                             >
+                                {/* Summary Stats */}
+                                {trades.length > 0 && (
+                                    <div className="grid grid-cols-2 gap-4 mb-6">
+                                        <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                                            <div className="flex items-center gap-2 text-green-700 mb-1">
+                                                <TrendingUp className="h-4 w-4" />
+                                                <span className="text-sm font-medium">Total to Buy</span>
+                                            </div>
+                                            <span className="text-xl font-bold text-green-800">
+                                                {formatCurrency(totalBuy)}
+                                            </span>
+                                        </div>
+                                        <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                                            <div className="flex items-center gap-2 text-red-700 mb-1">
+                                                <TrendingDown className="h-4 w-4" />
+                                                <span className="text-sm font-medium">Total to Sell</span>
+                                            </div>
+                                            <span className="text-xl font-bold text-red-800">
+                                                {formatCurrency(totalSell)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="bg-slate-50 rounded-xl p-6 mb-8 border border-slate-100">
                                     <h3 className="font-semibold text-slate-800 mb-4">Proposed Trades</h3>
                                     {trades.length === 0 ? (
-                                        <p className="text-slate-500 italic">No trades needed. Your portfolio is balanced!</p>
+                                        <div className="text-center py-8">
+                                            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                                            <p className="text-slate-600 font-medium">Your portfolio is balanced!</p>
+                                            <p className="text-slate-400 text-sm mt-1">No trades needed at this time.</p>
+                                        </div>
                                     ) : (
-                                        <div className="space-y-3">
+                                        <div className="space-y-3 max-h-64 overflow-y-auto">
                                             {trades.map((trade, i) => (
                                                 <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
                                                     <div className="flex items-center gap-3">
                                                         <span className={cn(
                                                             "px-2 py-1 rounded text-xs font-bold uppercase",
-                                                            trade.type === "BUY" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                                            trade.trade_type === "BUY" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                                                         )}>
-                                                            {trade.type}
+                                                            {trade.trade_type}
                                                         </span>
-                                                        <span className="font-semibold text-slate-700">{trade.ticker}</span>
+                                                        <div>
+                                                            <span className="font-semibold text-slate-700">{trade.ticker}</span>
+                                                            <p className="text-xs text-slate-400">{trade.name}</p>
+                                                        </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <span className="font-mono font-medium">{formatCurrency(trade.amount)}</span>
-                                                        <p className="text-xs text-slate-400">{trade.reason}</p>
+                                                        <span className="font-mono font-medium">{formatCurrency(trade.trade_amount)}</span>
+                                                        <p className="text-xs text-slate-400">
+                                                            {trade.current_allocation.toFixed(1)}% → {trade.target_allocation.toFixed(1)}%
+                                                        </p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -119,7 +158,7 @@ export function RebalanceWizard({ isOpen, onClose }: WizardProps) {
                                     <RefreshCw className="absolute inset-0 m-auto h-6 w-6 text-primary animate-pulse" />
                                 </div>
                                 <h3 className="text-xl font-semibold text-slate-900 mb-2">Executing Trades...</h3>
-                                <p className="text-slate-500">Connecting to exchange and placing orders.</p>
+                                <p className="text-slate-500">Updating your portfolio allocations.</p>
                             </motion.div>
                         )}
 
@@ -134,7 +173,7 @@ export function RebalanceWizard({ isOpen, onClose }: WizardProps) {
                                 </div>
                                 <h3 className="text-2xl font-bold text-slate-900 mb-2">Rebalancing Complete!</h3>
                                 <p className="text-slate-500 max-w-sm mx-auto mb-8">
-                                    Your portfolio has been successfully optimized. All trades have been settled.
+                                    Your portfolio has been successfully optimized. All trades have been executed.
                                 </p>
                                 <Button onClick={onClose} size="lg" className="px-10">
                                     Back to Dashboard

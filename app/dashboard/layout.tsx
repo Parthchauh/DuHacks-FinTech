@@ -11,7 +11,8 @@ export default function DashboardLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { user } = usePortfolioStore();
+    const user = usePortfolioStore((state) => state.user);
+    const fetchPortfolios = usePortfolioStore((state) => state.fetchPortfolios);
     const router = useRouter();
     const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -20,8 +21,9 @@ export default function DashboardLayout({
             router.push("/login");
         } else {
             setIsAuthorized(true);
+            fetchPortfolios();
         }
-    }, [user, router]);
+    }, [user, router, fetchPortfolios]);
 
     if (!isAuthorized) {
         return (

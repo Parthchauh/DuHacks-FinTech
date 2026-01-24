@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { usePortfolioStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
+import Swal from 'sweetalert2';
 
 const navigation = [
     { name: 'Overview', href: '/dashboard', icon: Home },
@@ -27,16 +28,35 @@ const navigation = [
 ];
 
 export function Sidebar() {
+
+// ... (existing imports)
+
     const pathname = usePathname();
-    const { setUser } = usePortfolioStore();
+    const { logout } = usePortfolioStore();
     const router = useRouter();
 
     const handleLogout = () => {
-        // setUser(null); // Type safety issue workaround needed if strictly typed as UserProfile only earlier, but now nullable
-        // Actually we cast or just simple reload clears if not persisted? No, persist keeps it.
-        // We need to set it to null.
-        usePortfolioStore.setState({ user: null });
-        router.push("/login");
+        Swal.fire({
+            title: 'Sign Out?',
+            text: "Are you sure you want to end your session?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb', // blue-600
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Yes, Sign Out',
+            cancelButtonText: 'Stay Logged In',
+            padding: '2em',
+            customClass: {
+                popup: 'rounded-2xl shadow-xl border border-slate-100',
+                confirmButton: 'px-6 py-2.5 rounded-xl font-semibold',
+                cancelButton: 'px-6 py-2.5 rounded-xl font-medium'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                logout();
+                router.push("/login");
+            }
+        });
     };
 
     return (
