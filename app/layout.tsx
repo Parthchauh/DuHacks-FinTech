@@ -9,6 +9,8 @@ export const metadata: Metadata = {
     description: "Next-gen portfolio optimization for Indian investors.",
 };
 
+import { Toaster } from "@/components/ui/Toaster";
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -16,7 +18,10 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
-            <body className={inter.className}>{children}</body>
+            <body className={inter.className}>
+                {children}
+                <Toaster position="top-center" richColors />
+            </body>
         </html>
     );
 }

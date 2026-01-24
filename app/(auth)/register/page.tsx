@@ -7,6 +7,8 @@ import { ArrowLeft, TrendingUp, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { usePortfolioStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
+import { registerUser } from "@/lib/auth";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
     const [firstName, setFirstName] = useState("");
@@ -21,15 +23,21 @@ export default function RegisterPage() {
         e.preventDefault();
         setIsLoading(true);
 
-        // Simulate API call
+        // Simulate network delay
         setTimeout(() => {
-            setUser({
+            const result = registerUser({
                 name: `${firstName} ${lastName}`,
-                email: email,
-                currency: "INR"
+                email,
+                password
             });
+
+            if (result.success) {
+                toast.success("Account created! Please log in.");
+                setTimeout(() => router.push("/login"), 1000);
+            } else {
+                toast.error(result.message);
+            }
             setIsLoading(false);
-            router.push("/dashboard");
         }, 1500);
     };
 
