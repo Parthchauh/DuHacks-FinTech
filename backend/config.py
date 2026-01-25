@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     # Used in Sharpe ratio, CAPM calculations, and portfolio optimization
     RISK_FREE_RATE: float = 0.072
     
+    # Google OAuth Configuration
+    GOOGLE_CLIENT_ID: str = ""  # Set in .env.local or .env
+    
     class Config:
         env_file = ".env"
 

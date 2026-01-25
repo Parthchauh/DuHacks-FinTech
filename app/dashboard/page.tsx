@@ -102,27 +102,41 @@ export default function DashboardPage() {
             animate="show"
         >
             {/* Welcome Section */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">
+                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
                         Welcome back{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}
                     </h1>
-                    <p className="text-slate-500">Here's what's happening with your portfolio today.</p>
+                    <p className="text-sm sm:text-base text-slate-500">Here's what's happening with your portfolio today.</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-2 sm:gap-3">
                     <Button 
                         variant="outline" 
+                        size="sm"
                         onClick={handleRefresh}
                         disabled={isRefreshing}
+                        className="flex-1 sm:flex-none min-h-[44px]"
                     >
                         <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        Refresh
+                        <span className="hidden xs:inline">Refresh</span>
                     </Button>
-                    <Button variant="outline" onClick={handleDownload} disabled={holdings.length === 0}>
-                        <Download className="mr-2 h-4 w-4" /> Download Report
+                    <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleDownload} 
+                        disabled={holdings.length === 0}
+                        className="flex-1 sm:flex-none min-h-[44px]"
+                    >
+                        <Download className="mr-2 h-4 w-4" />
+                        <span className="hidden sm:inline">Download</span>
                     </Button>
-                    <Button onClick={() => router.push('/dashboard/rebalance')} disabled={holdings.length === 0}>
-                        Rebalance Portfolio
+                    <Button 
+                        size="sm"
+                        onClick={() => router.push('/dashboard/rebalance')} 
+                        disabled={holdings.length === 0}
+                        className="w-full sm:w-auto min-h-[44px]"
+                    >
+                        Rebalance
                     </Button>
                 </div>
             </div>
@@ -168,7 +182,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Main Content Area */}
-            <div className="grid lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                 <motion.div variants={item} className="lg:col-span-2 space-y-6">
                     <PerformanceChart />
                 </motion.div>

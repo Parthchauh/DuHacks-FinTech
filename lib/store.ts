@@ -136,6 +136,7 @@ interface PortfolioState {
     // Auth Actions
     login: (email: string, password: string, captcha_token?: string, captcha_answer?: string) => Promise<boolean>;
     verifyMfa: (otp: string) => Promise<boolean>;
+    googleLogin: (idToken: string) => Promise<boolean>;
     register: (name: string, email: string, password: string) => Promise<boolean>;
     logout: () => void;
     deleteAccount: () => Promise<boolean>;
@@ -239,6 +240,27 @@ export const usePortfolioStore = create<PortfolioState>()(
                     return true;
                 } catch (error: any) {
                     set({ error: error.detail || 'Verification failed', isLoading: false });
+                    return false;
+                }
+            },
+
+            googleLogin: async (idToken) => {
+                set({ isLoading: true, error: null });
+                try {
+                    await api.googleLogin(idToken);
+                    const user = await api.getMe();
+                    set({ 
+                        user, 
+                        isAuthenticated: true, 
+                        isLoading: false,
+                        mfaRequired: false,
+                        mfaToken: null
+                    });
+                    
+                    await get().fetchPortfolios();
+                    return true;
+                } catch (error: any) {
+                    set({ error: error.detail || 'Google login failed', isLoading: false });
                     return false;
                 }
             },

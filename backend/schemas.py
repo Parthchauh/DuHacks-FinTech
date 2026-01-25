@@ -74,6 +74,10 @@ class LoginRequest(BaseModel):
     captcha_answer: Optional[str] = None
 
 
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
+
 class CaptchaResponse(BaseModel):
     token: str
     question: str

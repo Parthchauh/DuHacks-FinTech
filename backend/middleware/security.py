@@ -57,11 +57,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Content Security Policy - restrict resource loading
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.gstatic.com; "
+            "style-src 'self' 'unsafe-inline' https://accounts.google.com; "
             "img-src 'self' data: https:; "
             "font-src 'self' data:; "
-            "connect-src 'self' https://www.alphavantage.co; "
+            "connect-src 'self' https://www.alphavantage.co https://accounts.google.com; "
+            "frame-src 'self' https://accounts.google.com; "
             "frame-ancestors 'none';"
         )
         

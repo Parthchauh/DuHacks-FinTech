@@ -88,7 +88,7 @@ export function ImportZone({ onSuccess }: ImportZoneProps) {
                             {isDragActive ? "Drop the file here" : "Click or drag file to upload"}
                         </p>
                         <p className="text-xs text-slate-500">
-                            Supports Zerodha, Groww, Angel One CSV/Excel exports
+                            Supports CSV and Excel files
                         </p>
                     </div>
                 </div>
@@ -103,11 +103,6 @@ export function ImportZone({ onSuccess }: ImportZoneProps) {
                         <p className="text-sm text-green-700 mt-1">
                             {uploadResult.message}
                         </p>
-                        {uploadResult.metadata && (
-                            <div className="mt-2 text-xs text-green-800 bg-green-100/50 p-2 rounded">
-                                Detected Broker: <span className="font-semibold uppercase">{uploadResult.metadata.detected_broker}</span>
-                            </div>
-                        )}
                     </div>
                 </div>
             )}

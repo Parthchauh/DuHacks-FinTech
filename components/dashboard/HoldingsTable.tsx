@@ -41,14 +41,14 @@ export function HoldingsTable() {
             <AddHoldingModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
             
             <Card className="overflow-hidden">
-                {/* Header - only show Add button when there are holdings */}
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
+                {/* Header - responsive layout */}
+                <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white/50">
                     <div>
-                        <h3 className="text-lg font-semibold text-slate-900">Your Holdings</h3>
-                        <p className="text-sm text-slate-500">Manage your assets and targets</p>
+                        <h3 className="text-base sm:text-lg font-semibold text-slate-900">Your Holdings</h3>
+                        <p className="text-xs sm:text-sm text-slate-500">Manage your assets and targets</p>
                     </div>
                     {holdings.length > 0 && (
-                        <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
+                        <Button size="sm" onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto min-h-[44px]">
                             <Plus className="mr-2 h-4 w-4" /> Add Holding
                         </Button>
                     )}
@@ -164,7 +164,7 @@ export function HoldingsTable() {
                                                     <Button 
                                                         size="sm" 
                                                         variant="ghost" 
-                                                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                        className="h-11 w-11 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 touch-manipulation"
                                                         onClick={() => item.id && handleDelete(item.id, item.ticker)}
                                                         disabled={deletingId === item.id}
                                                     >

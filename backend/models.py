@@ -79,6 +79,10 @@ class User(Base):
     allowed_ips = Column(Text, nullable=True)  # JSON array of whitelisted IPs
     email_preferences = Column(Text, nullable=True)  # JSON for email settings
     
+    # OAuth Providers
+    google_id = Column(String, nullable=True, unique=True)  # Google OAuth sub claim
+    auth_provider = Column(String, default="email")  # "email", "google", "google_linked"
+    
     # One user can have multiple portfolios (e.g., "Retirement", "Trading")
     portfolios = relationship("Portfolio", back_populates="owner", cascade="all, delete-orphan")
 

@@ -31,10 +31,10 @@ export function AllocationChart() {
     // Empty state when no holdings
     if (data.length === 0) {
         return (
-            <Card className="h-[400px] flex flex-col">
+            <Card className="min-h-[300px] sm:h-[400px] flex flex-col p-4 sm:p-6">
                 <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-slate-900">Current Allocation</h3>
-                    <p className="text-sm text-slate-500">Visual breakdown of your holdings</p>
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-900">Current Allocation</h3>
+                    <p className="text-xs sm:text-sm text-slate-500">Visual breakdown of your holdings</p>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
                     {/* Empty State SVG */}
@@ -86,12 +86,12 @@ export function AllocationChart() {
     }
 
     return (
-        <Card className="h-[400px] flex flex-col">
+        <Card className="min-h-[300px] sm:h-[400px] flex flex-col p-4 sm:p-6">
             <div className="mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Current Allocation</h3>
-                <p className="text-sm text-slate-500">Visual breakdown of your holdings</p>
+                <h3 className="text-base sm:text-lg font-semibold text-slate-900">Current Allocation</h3>
+                <p className="text-xs sm:text-sm text-slate-500">Visual breakdown of your holdings</p>
             </div>
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie

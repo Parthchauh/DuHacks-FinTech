@@ -12,6 +12,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { GoogleBtn } from "@/components/GoogleBtn";
 import { Card } from "@/components/ui/Card";
 import { ArrowLeft, TrendingUp, Loader2, Eye, EyeOff, Check, X } from "lucide-react";
 import { AnimatedLoader } from "@/components/ui/AnimatedLoader";
@@ -299,14 +300,24 @@ export default function RegisterPage() {
 
                     {/* Submit Button */}
                     <Button 
-                        className="w-full text-base sm:text-lg font-semibold py-5 sm:py-6" 
-                        size="lg" 
+                        className="w-full h-12 text-base sm:text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.01] active:scale-[0.99] transition-all bg-gradient-to-r from-primary to-blue-600 rounded-xl"
                         disabled={isLoading || !isFormValid}
                     >
                         {isLoading ? <AnimatedLoader size="sm" /> : "Create Account"}
                     </Button>
 
-                    <p className="text-center text-xs sm:text-sm text-slate-500 mt-4 sm:mt-6">
+                    <div className="relative my-4 sm:my-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-slate-200" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-white/50 backdrop-blur-sm px-2 text-slate-500">Or continue with</span>
+                        </div>
+                    </div>
+
+                    <GoogleBtn text="Sign up with Google" onSuccess={() => router.push('/dashboard')} />
+
+                    <p className="text-center text-sm text-slate-500 mt-6 font-medium">
                         Already have an account?{" "}
                         <Link href="/login" className="text-primary font-semibold hover:underline">
                             Sign In

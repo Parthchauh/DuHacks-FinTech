@@ -53,8 +53,8 @@ export function PerformanceChart() {
     // Empty state when no holdings
     if (!hasHoldings) {
         return (
-            <Card className="h-[400px] flex flex-col p-6">
-                <div className="flex items-center justify-between mb-6">
+            <Card className="min-h-[300px] sm:h-[400px] flex flex-col p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
                     <div>
                         <h3 className="font-semibold text-slate-900">Portfolio Performance</h3>
                         <p className="text-sm text-slate-500">Net worth over time</p>
@@ -110,18 +110,18 @@ export function PerformanceChart() {
     }
 
     return (
-        <Card className="h-[400px] flex flex-col p-6">
-            <div className="flex items-center justify-between mb-6">
+        <Card className="min-h-[300px] sm:h-[400px] flex flex-col p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <div>
                     <h3 className="font-semibold text-slate-900">Portfolio Performance</h3>
                     <p className="text-sm text-slate-500">Net worth over time</p>
                 </div>
-                <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
+                <div className="flex bg-slate-100 rounded-lg p-1 gap-0.5 sm:gap-1 overflow-x-auto">
                     {["1M", "3M", "6M", "1Y", "ALL"].map((r) => (
                         <button
                             key={r}
                             onClick={() => setRange(r)}
-                            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${range === r ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            className={`px-2 sm:px-3 py-1.5 rounded-md text-xs font-semibold transition-all min-w-[40px] touch-manipulation ${range === r ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
                                 }`}
                         >
                             {r}
@@ -130,7 +130,7 @@ export function PerformanceChart() {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 -ml-4">
+            <div className="flex-1 min-h-[200px] -ml-2 sm:-ml-4">
                 {isLoading ? (
                     <div className="flex items-center justify-center h-full">
                         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />

@@ -56,25 +56,25 @@ export function MonteCarloChart() {
     }
 
     return (
-        <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
+        <Card className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
                 <div>
                     <h3 className="font-bold text-slate-900">Monte Carlo Simulation</h3>
-                    <p className="text-sm text-slate-500">1,000 portfolio projections over {days} days</p>
+                    <p className="text-xs sm:text-sm text-slate-500">1,000 portfolio projections over {days} days</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <select
                         value={days}
                         onChange={(e) => setDays(Number(e.target.value))}
-                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                        className="flex-1 sm:flex-none px-3 py-2 rounded-lg border border-slate-200 text-sm min-h-[44px]"
                     >
                         <option value={63}>3 Months</option>
                         <option value={126}>6 Months</option>
                         <option value={252}>1 Year</option>
                         <option value={504}>2 Years</option>
                     </select>
-                    <Button onClick={runSimulation} disabled={isLoading} size="sm">
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Run Simulation'}
+                    <Button onClick={runSimulation} disabled={isLoading} size="sm" className="min-h-[44px] whitespace-nowrap">
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Run'}
                     </Button>
                 </div>
             </div>
@@ -85,7 +85,7 @@ export function MonteCarloChart() {
                 </div>
             ) : (
                 <>
-                    <div className="h-[300px]">
+                    <div className="h-[250px] sm:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData}>
                                 <defs>
@@ -142,7 +142,7 @@ export function MonteCarloChart() {
                     </div>
 
                     {/* Stats */}
-                    <div className="grid grid-cols-2 gap-4 mt-6">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6">
                         <div className="bg-slate-50 rounded-xl p-4">
                             <p className="text-sm text-slate-500 mb-1">Expected Value</p>
                             <p className="text-xl font-bold text-slate-900">

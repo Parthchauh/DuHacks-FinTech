@@ -58,19 +58,19 @@ export function RebalanceWizard({ isOpen, onClose }: WizardProps) {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
             >
-                <Card className="w-full max-w-2xl overflow-hidden shadow-2xl relative bg-white max-h-[90vh] overflow-y-auto">
+                <Card className="w-full max-w-2xl overflow-hidden shadow-2xl relative bg-white max-h-[90vh] overflow-y-auto mx-4">
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute top-4 right-4 z-10"
+                        className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 h-10 w-10 touch-manipulation"
                         onClick={onClose}
                     >
                         <X className="h-5 w-5" />
                     </Button>
 
-                    <div className="p-8">
-                        <h2 className="text-2xl font-bold text-slate-900 mb-2">Portfolio Rebalancing</h2>
-                        <p className="text-slate-500 mb-8">Optimize your holdings to match your target strategy.</p>
+                    <div className="p-4 sm:p-8">
+                        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2 pr-8">Portfolio Rebalancing</h2>
+                        <p className="text-sm sm:text-base text-slate-500 mb-6 sm:mb-8">Optimize your holdings to match your target strategy.</p>
 
                         {step === 1 && (
                             <motion.div
@@ -79,7 +79,7 @@ export function RebalanceWizard({ isOpen, onClose }: WizardProps) {
                             >
                                 {/* Summary Stats */}
                                 {trades.length > 0 && (
-                                    <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
                                         <div className="bg-green-50 border border-green-100 rounded-xl p-4">
                                             <div className="flex items-center gap-2 text-green-700 mb-1">
                                                 <TrendingUp className="h-4 w-4" />

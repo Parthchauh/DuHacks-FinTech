@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { GoogleBtn } from "@/components/GoogleBtn";
 import { ArrowLeft, TrendingUp, Loader2, RefreshCw, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { AnimatedLoader } from "@/components/ui/AnimatedLoader";
 
@@ -283,6 +284,17 @@ export default function LoginPage() {
                     >
                         {isLoading ? <AnimatedLoader size="sm" /> : "Sign In"}
                     </Button>
+
+                    <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-slate-200" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-white px-2 text-slate-500">Or continue with</span>
+                        </div>
+                    </div>
+
+                    <GoogleBtn onSuccess={() => router.push('/dashboard')} />
 
                     <p className="text-center text-sm text-slate-500 mt-8 font-medium">
                         Don't have an account?{" "}

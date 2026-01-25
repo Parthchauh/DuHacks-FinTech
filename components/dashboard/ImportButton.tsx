@@ -3,8 +3,7 @@
 /**
  * Import Button Component
  * ========================
- * File upload component for importing holdings from broker exports.
- * Supports CSV and Excel files from Zerodha, Angel One, Upstox, Groww.
+ * File upload component for importing holdings from CSV/Excel files.
  */
 
 import { useState, useRef } from "react";

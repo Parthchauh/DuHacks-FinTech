@@ -54,13 +54,13 @@ export function EfficientFrontierChart() {
     }
 
     return (
-        <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
+        <Card className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
                 <div>
                     <h3 className="font-bold text-slate-900">Efficient Frontier</h3>
-                    <p className="text-sm text-slate-500">Risk-return tradeoff analysis (MPT)</p>
+                    <p className="text-xs sm:text-sm text-slate-500">Risk-return tradeoff analysis (MPT)</p>
                 </div>
-                <Button onClick={calculateFrontier} disabled={isLoading} size="sm">
+                <Button onClick={calculateFrontier} disabled={isLoading} size="sm" className="w-full sm:w-auto min-h-[44px]">
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Calculate'}
                 </Button>
             </div>
@@ -71,7 +71,7 @@ export function EfficientFrontierChart() {
                 </div>
             ) : (
                 <>
-                    <div className="h-[300px]">
+                    <div className="h-[250px] sm:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -130,9 +130,9 @@ export function EfficientFrontierChart() {
 
                     {/* Optimal Portfolio Details */}
                     {optimal && (
-                        <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-100">
-                            <h4 className="font-semibold text-green-800 mb-3">Optimal Portfolio (Max Sharpe)</h4>
-                            <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-green-50 rounded-xl border border-green-100">
+                            <h4 className="font-semibold text-green-800 mb-3 text-sm sm:text-base">Optimal Portfolio (Max Sharpe)</h4>
+                            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
                                 <div>
                                     <p className="text-sm text-green-600">Expected Return</p>
                                     <p className="text-lg font-bold text-green-800">{optimal.expected_return.toFixed(1)}%</p>

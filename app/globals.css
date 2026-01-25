@@ -116,27 +116,46 @@
 
 /* =========================================================================
    Responsive Typography Scale
-   Fluid typography from 210px (tiny phones) to 4K+ (TVs)
+   Professional typesetting with Inter font
    ========================================================================= */
 @layer base {
   html {
-    /* Base: 14px at 210px viewport, 18px at 1920px */
-    font-size: clamp(0.875rem, 0.8rem + 0.5vw, 1.125rem);
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
+    /* More predictable fluid scaling: 15px at 320px, 16px at 1440px */
+    font-size: clamp(0.9375rem, 0.9rem + 0.25vw, 1rem);
+    letter-spacing: -0.01em;
+  }
+
+  body {
+    line-height: 1.6;
   }
 
   h1 {
-    @apply text-2xl font-bold;
-    font-size: clamp(1.5rem, 1.2rem + 2vw, 3rem);
+    @apply font-bold tracking-tight;
+    font-size: clamp(1.75rem, 1.5rem + 1.5vw, 2.75rem);
+    line-height: 1.1;
   }
 
   h2 {
-    @apply text-xl font-semibold;
-    font-size: clamp(1.25rem, 1rem + 1.5vw, 2.25rem);
+    @apply font-semibold tracking-tight;
+    font-size: clamp(1.375rem, 1.2rem + 1vw, 2rem);
+    line-height: 1.2;
   }
 
   h3 {
-    @apply text-lg font-semibold;
-    font-size: clamp(1.125rem, 0.9rem + 1vw, 1.75rem);
+    @apply font-semibold;
+    font-size: clamp(1.125rem, 1rem + 0.5vw, 1.5rem);
+    line-height: 1.3;
+  }
+
+  p {
+    line-height: 1.7;
   }
 }
 

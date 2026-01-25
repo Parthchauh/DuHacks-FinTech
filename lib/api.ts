@@ -229,6 +229,59 @@ class ApiClient {
         return response;
     }
 
+    /**
+     * Authenticate with Google ID Token.
+     * Used by Google Sign-In button to exchange Google credential for app tokens.
+     */
+    async googleLogin(id_token: string) {
+        const response = await this.request<{
+            access_token: string;
+            refresh_token: string;
+            token_type: string;
+            mfa_required: boolean;
+        }>('/api/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ id_token }),
+        });
+
+        if (response.access_token && response.refresh_token) {
+            this.setTokens(response.access_token, response.refresh_token);
+        }
+
+        return response;
+    }
+
+    async setupTotp() {
+        return this.request<{
+            secret: string;
+            uri: string;
+            backup_codes: string[];
+        }>('/api/auth/mfa/setup-totp', {
+            method: 'POST'
+        });
+    }
+
+    async confirmTotp(code: string) {
+        return this.request<{ message: string }>('/api/auth/mfa/confirm-totp', {
+            method: 'POST',
+            body: JSON.stringify({ code })
+        });
+    }
+
+    async getMfaStatus() {
+        return this.request<{
+            method: string;
+            totp_enabled: boolean;
+            has_backup_codes: boolean;
+        }>('/api/auth/mfa/status');
+    }
+
+    async disableMfa() {
+        return this.request<{ message: string }>('/api/auth/mfa/disable', {
+            method: 'POST'
+        });
+    }
+
     async logout() {
         this.clearTokens();
     }

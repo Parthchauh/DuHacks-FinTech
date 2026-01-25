@@ -174,7 +174,7 @@ async def login(
     client_ip = get_client_ip(request)
     
     # Enforce basic rate limit check
-    if get_failed_attempts_by_ip(db, client_ip) > 100:
+    if get_failed_attempts_by_ip(db, client_ip) > 15:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many failed attempts. Please try again later."
@@ -232,7 +232,7 @@ async def login_json(
     # 1. Check Rate Limiting / Captcha Requirement
     failed_attempts = get_failed_attempts_by_ip(db, client_ip)
     
-    if failed_attempts >= 20:
+    if failed_attempts >= 15:
         # Require captcha
         if not credentials.captcha_token or not credentials.captcha_answer:
             raise HTTPException(
@@ -332,6 +332,102 @@ async def verify_mfa(
         "token_type": "bearer",
         "mfa_required": False
     }
+
+
+@router.post("/google", response_model=schemas.LoginResponse)
+async def google_login(
+    payload: schemas.GoogleLoginRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Authenticate with Google ID Token.
+    1. Verify token with Google.
+    2. Check if user exists (by email).
+    3. If exists, login.
+    4. If not, register (provider='google').
+    """
+    client_ip = get_client_ip(request)
+    
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        from config import get_settings
+        
+        settings = get_settings()
+        
+        # Verify token with Google
+        idinfo = id_token.verify_oauth2_token(
+            payload.id_token, 
+            google_requests.Request(), 
+            audience=settings.GOOGLE_CLIENT_ID
+        )
+        
+        email = idinfo['email']
+        name = idinfo.get('name', '')
+        google_id = idinfo['sub']
+        
+        # Check if user exists
+        user = db.query(models.User).filter(models.User.email == email).first()
+        
+        if not user:
+            # Register new user
+            user = models.User(
+                email=email,
+                full_name=name,
+                hashed_password="",  # No password for Google users
+                google_id=google_id,
+                auth_provider='google',
+                is_verified=True  # Google emails are verified
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            
+            # Create default portfolio
+            default_portfolio = models.Portfolio(
+                name="My Portfolio",
+                description="Default portfolio",
+                is_default=True,
+                user_id=user.id
+            )
+            db.add(default_portfolio)
+            db.commit()
+            
+            # Send welcome email
+            background_tasks.add_task(send_welcome_email, user.email, user.full_name)
+            
+            log_security_event("registration", email, client_ip, True, "provider=google")
+            
+        else:
+            # Login existing user
+            # Optional: Link Google ID if not already linked
+            if not user.google_id:
+                user.google_id = google_id
+                if user.auth_provider == 'email':
+                    user.auth_provider = 'google_linked'
+                db.commit()
+            
+            log_security_event("login", email, client_ip, True, "provider=google")
+
+        # Generate Tokens
+        access_token = create_access_token(data={"sub": str(user.id)})
+        refresh_token = create_refresh_token(data={"sub": str(user.id)})
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "mfa_required": False
+        }
+        
+    except ValueError:
+        log_security_event("login_failed", "unknown", client_ip, False, "invalid_google_token")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Google Token"
+        )
 
 
 @router.post("/refresh", response_model=schemas.Token)
