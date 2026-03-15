@@ -23,8 +23,14 @@ from config import get_settings
 settings = get_settings()
 
 # Create database engine with connection pooling
-# PostgreSQL is chosen for ACID compliance, JSON support, and production scalability
-engine = create_engine(settings.DATABASE_URL)
+# Supports both PostgreSQL and SQLite
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        settings.DATABASE_URL,
+        connect_args={"check_same_thread": False}
+    )
+else:
+    engine = create_engine(settings.DATABASE_URL)
 
 # Session factory - autocommit=False ensures explicit transaction control
 # autoflush=False prevents premature writes before commit

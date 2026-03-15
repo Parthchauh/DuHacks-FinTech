@@ -9,8 +9,11 @@ Secure authentication endpoints with:
 - Disposable email blocking
 - Security event logging
 """
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
+
+logger = logging.getLogger("security")
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from database import get_db
@@ -293,16 +296,13 @@ async def verify_mfa(
     Verify OTP and complete login.
     """
     client_ip = get_client_ip(request)
-    print(f"DEBUG: verifying MFA for IP {client_ip}")
-    print(f"DEBUG: Token: {data.mfa_token[:10]}...")
-    print(f"DEBUG: OTP Input: {data.otp}")
+    logger.info(f"MFA verification attempt from IP {client_ip}")
     
     # Decode temp token
     user_id = verify_token(data.mfa_token, token_type="mfa_pending")
-    print(f"DEBUG: User ID from token: {user_id}")
     
     if not user_id:
-        print("DEBUG: Token validation failed (None)")
+        logger.warning(f"MFA token validation failed from IP {client_ip}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired. Please login again."
@@ -310,7 +310,7 @@ async def verify_mfa(
     
     # Verify OTP
     is_valid = verify_otp_entry(db, user_id, data.otp, purpose="login")
-    print(f"DEBUG: OTP valid? {is_valid}")
+    logger.info(f"MFA OTP verification for user_id={user_id}: {'success' if is_valid else 'failed'}")
     
     if not is_valid:
         log_security_event("login_mfa", f"user_{user_id}", client_ip, False, "invalid_otp")

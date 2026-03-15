@@ -1,7 +1,10 @@
 import httpx
+import logging
 from config import get_settings
 from typing import Optional, List, Dict, Any
 import json
+
+logger = logging.getLogger("email")
 
 settings = get_settings()
 
@@ -19,7 +22,7 @@ async def send_email(
     """
     
     if not settings.SMTP_PASSWORD:
-        print("[ERROR] Email not configured - API Key (SMTP_PASSWORD) missing")
+        logger.error("Email not configured - API Key (SMTP_PASSWORD) missing")
         return False
         
     # Headers for Brevo API
@@ -57,14 +60,14 @@ async def send_email(
             )
             
             if response.status_code in (200, 201, 202):
-                print(f"[SUCCESS] Email sent successfully to {to_email}")
+                logger.info(f"Email sent successfully to {to_email}")
                 return True
             else:
-                print(f"[ERROR] Failed to send email via API: {response.status_code} - {response.text}")
+                logger.error(f"Failed to send email via API: {response.status_code} - {response.text}")
                 return False
                 
     except Exception as e:
-        print(f"[ERROR] Exception sending email: {str(e)}")
+        logger.exception(f"Exception sending email to {to_email}: {str(e)}")
         return False
 
 
@@ -205,6 +208,11 @@ async def send_password_reset_email(to_email: str, user_name: str, reset_link: s
 async def send_mfa_otp_email(to_email: str, user_name: str, otp: str) -> bool:
     """Send MFA OTP email"""
     
+    # In debug mode without SMTP, print OTP to console for local development
+    if settings.DEBUG and not settings.SMTP_PASSWORD:
+        logger.info(f"[DEV MODE] Login OTP for {to_email}: {otp}")
+        return True
+    
     subject = "Login Verification Code"
     
     body_html = f"""
@@ -284,6 +292,9 @@ async def send_password_change_success_email(to_email: str, user_name: str) -> b
     </html>
     """
     
+    return await send_email(to_email, subject, body_html, f"Your password was changed successfully.")
+
+
 async def send_account_deleted_email(to_email: str, user_name: str) -> bool:
     """Send confirmation of account deletion"""
     

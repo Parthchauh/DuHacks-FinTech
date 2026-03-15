@@ -304,3 +304,54 @@ class GoalResponse(GoalBase):
     
     class Config:
         from_attributes = True
+
+
+# ============== Sector Rotation Schemas ==============
+class SectorRanking(BaseModel):
+    sector: str
+    color: str
+    rs_1m: float
+    rs_3m: float
+    rs_6m: float
+    composite_rs: float
+    momentum: str
+    return_1m: float
+    return_3m: float
+    return_6m: float
+    rank: int
+    etf: Optional[str] = None
+
+
+class SectorSignalStock(BaseModel):
+    ticker: str
+    name: str
+    rs_score: float
+    volume_avg: int
+    mcap: str
+    weight_in_sector: float
+
+
+class SectorSignal(BaseModel):
+    sector: str
+    color: str
+    composite_rs: float
+    momentum: str
+    signal: str
+    top_stocks: Optional[List[SectorSignalStock]] = None
+
+
+class SectorTrade(BaseModel):
+    sector: str
+    trade_type: str
+    current_pct: float
+    target_pct: float
+    diff_pct: float
+    trade_value: float
+    suggested_stocks: List[dict] = []
+
+
+class SectorImpactAnalysis(BaseModel):
+    expected_return_change_pct: float
+    risk_change_pct: float
+    rationale: str
+

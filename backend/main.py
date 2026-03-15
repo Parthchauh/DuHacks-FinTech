@@ -24,6 +24,7 @@ from routers.mfa import router as mfa_router
 from routers.broker import router as broker_router
 from routers.import_data import router as import_router
 from routers.notifications import router as notifications_router
+from routers.sector_rotation import router as sector_rotation_router
 from middleware.security import SecurityHeadersMiddleware, RateLimitMiddleware
 from services.scheduler_service import scheduler_service
 from config import get_settings
@@ -46,8 +47,8 @@ app = FastAPI(
 # Security Headers Middleware (must be added first)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# Rate Limiting Middleware (60 requests per minute per IP)
-app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+# Rate Limiting Middleware (600 requests per minute per IP for local development)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=600)
 
 # CORS Configuration
 app.add_middleware(
@@ -78,6 +79,7 @@ app.include_router(mfa_router)
 app.include_router(broker_router)
 app.include_router(import_router)
 app.include_router(notifications_router)
+app.include_router(sector_rotation_router)
 
 
 @app.get("/")

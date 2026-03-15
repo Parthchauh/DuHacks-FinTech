@@ -5,6 +5,7 @@ import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { TrendingUp, Activity, PieChart, IndianRupee, Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
+import { SectorRotationCard } from "@/components/dashboard/SectorRotationCard";
 import { usePortfolioStore, formatCurrency } from "@/lib/store";
 import { downloadPortfolioReport } from "@/lib/report";
 import { motion } from "framer-motion";
@@ -185,6 +186,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                 <motion.div variants={item} className="lg:col-span-2 space-y-6">
                     <PerformanceChart />
+                    <SectorRotationCard />
                 </motion.div>
 
                 <motion.div variants={item} className="space-y-6">
