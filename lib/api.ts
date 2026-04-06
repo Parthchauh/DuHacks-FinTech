@@ -177,9 +177,33 @@ class ApiClient {
      * Backend creates user + default portfolio + sends welcome email.
      */
     async register(data: { email: string; password: string; full_name: string }) {
-        return this.request<any>('/api/auth/register', {
+        const response = await this.request<{
+            access_token?: string;
+            refresh_token?: string;
+            token_type?: string;
+            mfa_required?: boolean;
+            message?: string;
+        }>('/api/auth/register-and-login', {
             method: 'POST',
             body: JSON.stringify(data),
+        });
+        
+        if (response.access_token && response.refresh_token) {
+            this.setTokens(response.access_token, response.refresh_token);
+        }
+        
+        return response;
+    }
+
+    async validatePassword(password: string) {
+        return this.request<{
+            is_valid: boolean;
+            message: string;
+            score: number;
+            strength: string;
+        }>('/api/auth/validate-password', {
+            method: 'POST',
+            body: JSON.stringify({ password }),
         });
     }
 

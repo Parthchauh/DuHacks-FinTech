@@ -25,6 +25,9 @@ from routers.broker import router as broker_router
 from routers.import_data import router as import_router
 from routers.notifications import router as notifications_router
 from routers.sector_rotation import router as sector_rotation_router
+from routers.rebalancing import router as rebalancing_router
+from routers.smallcase import router as smallcase_router
+from routers.market_data import router as market_data_router
 from middleware.security import SecurityHeadersMiddleware, RateLimitMiddleware
 from services.scheduler_service import scheduler_service
 from config import get_settings
@@ -80,6 +83,9 @@ app.include_router(broker_router)
 app.include_router(import_router)
 app.include_router(notifications_router)
 app.include_router(sector_rotation_router)
+app.include_router(rebalancing_router)
+app.include_router(smallcase_router)
+app.include_router(market_data_router)
 
 
 @app.get("/")

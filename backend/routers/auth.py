@@ -124,44 +124,121 @@ async def register(
             detail=message
         )
     
-    # Check if email already exists (GENERIC ERROR to prevent enumeration)
+    # Check if email already exists
     existing_user = db.query(models.User).filter(models.User.email == user_data.email).first()
     if existing_user:
         log_security_event("registration", user_data.email, client_ip, False, "duplicate_email")
-        # Return success-like response or generic error
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Account already exists"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists. Please login instead."
         )
     
-    # Create user
-    db_user = models.User(
-        email=user_data.email.lower().strip(),  # Normalize email
-        full_name=user_data.full_name.strip(),
-        hashed_password=get_password_hash(user_data.password),
-        is_verified=False
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    try:
+        # Create user
+        db_user = models.User(
+            email=user_data.email.lower().strip(),
+            full_name=user_data.full_name.strip(),
+            hashed_password=get_password_hash(user_data.password),
+            is_verified=False
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        
+        # Create default portfolio
+        default_portfolio = models.Portfolio(
+            name="My Portfolio",
+            description="Default portfolio",
+            is_default=True,
+            user_id=db_user.id
+        )
+        db.add(default_portfolio)
+        db.commit()
+        
+        # Log successful registration
+        log_security_event("registration", user_data.email, client_ip, True, f"user_id={db_user.id}")
+        
+        # Send welcome email in background
+        background_tasks.add_task(send_welcome_email, db_user.email, db_user.full_name)
+        
+        return db_user
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Registration DB error for {user_data.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed due to a server error. Please try again."
+        )
+
+
+@router.post("/register-and-login", response_model=schemas.LoginResponse, status_code=status.HTTP_201_CREATED)
+async def register_and_login(
+    user_data: schemas.UserCreate,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Register a new user AND return JWT tokens immediately.
+    Skips MFA for initial registration to reduce friction.
+    """
+    client_ip = get_client_ip(request)
     
-    # Create default portfolio
-    default_portfolio = models.Portfolio(
-        name="My Portfolio",
-        description="Default portfolio",
-        is_default=True,
-        user_id=db_user.id
-    )
-    db.add(default_portfolio)
-    db.commit()
+    # Validate email format
+    if not validate_email_format(user_data.email):
+        raise HTTPException(status_code=400, detail="Please enter a valid email address")
     
-    # Log successful registration
-    log_security_event("registration", user_data.email, client_ip, True, f"user_id={db_user.id}")
+    if is_disposable_email(user_data.email):
+        raise HTTPException(status_code=400, detail="Temporary email addresses are not allowed.")
     
-    # Send welcome email in background
-    background_tasks.add_task(send_welcome_email, db_user.email, db_user.full_name)
+    is_valid, message, score = validate_password_strength(user_data.password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=message)
     
-    return db_user
+    existing_user = db.query(models.User).filter(models.User.email == user_data.email).first()
+    if existing_user:
+        raise HTTPException(status_code=409, detail="An account with this email already exists. Please login instead.")
+    
+    try:
+        db_user = models.User(
+            email=user_data.email.lower().strip(),
+            full_name=user_data.full_name.strip(),
+            hashed_password=get_password_hash(user_data.password),
+            is_verified=False
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        
+        default_portfolio = models.Portfolio(
+            name="My Portfolio",
+            description="Default portfolio",
+            is_default=True,
+            user_id=db_user.id
+        )
+        db.add(default_portfolio)
+        db.commit()
+        
+        log_security_event("registration", user_data.email, client_ip, True, f"user_id={db_user.id}")
+        background_tasks.add_task(send_welcome_email, db_user.email, db_user.full_name)
+        
+        # Generate tokens immediately (no MFA for registration)
+        access_token = create_access_token(data={"sub": str(db_user.id)})
+        refresh_token = create_refresh_token(data={"sub": str(db_user.id)})
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "mfa_required": False,
+            "message": "Account created successfully!"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Register-and-login DB error for {user_data.email}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Registration failed due to a server error. Please try again.")
 
 
 @router.post("/login", response_model=schemas.Token)

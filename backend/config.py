@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     # Used in Sharpe ratio, CAPM calculations, and portfolio optimization
     RISK_FREE_RATE: float = 0.072
     
+    # Groww API Configuration (for live market data)
+    GROWW_API_KEY: str = ""        # Set in .env — your Groww API Key
+    GROWW_API_SECRET: str = ""     # Set in .env — your Groww API Secret
+    GROWW_API_AUTH_TOKEN: str = "" # Auto-generated, or paste from Groww portal
+
     # Google OAuth Configuration
     GOOGLE_CLIENT_ID: str = ""  # Set in .env.local or .env
     
