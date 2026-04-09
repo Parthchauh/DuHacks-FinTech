@@ -8,13 +8,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Script from "next/script";
 
-// Extend window interface for Google GIS
-declare global {
-    interface Window {
-        google: any;
-    }
-}
-
 interface GoogleBtnProps {
     text?: string;
     onSuccess?: () => void;

@@ -176,7 +176,7 @@ class ApiClient {
      * Register a new user account.
      * Backend creates user + default portfolio + sends welcome email.
      */
-    async register(data: { email: string; password: string; full_name: string }) {
+    async register(data: { email: string; password: string; full_name: string; risk_profile?: string }) {
         const response = await this.request<{
             access_token?: string;
             refresh_token?: string;
@@ -595,6 +595,75 @@ class ApiClient {
     async exportPdf(portfolioId: number) {
         const url = this.getExportPdfUrl(portfolioId);
         await this.downloadFile(url, `OptiWealth_Portfolio_${portfolioId}.pdf`);
+    }
+
+    // =========================================================================
+    // CHARTS ENDPOINTS
+    // =========================================================================
+
+    /**
+     * Fetch OHLCV candle data for lightweight-charts.
+     * Returns array of bars with { time, open, high, low, close, volume }.
+     */
+    async getChartOHLCV(symbol: string, period: string = '1M', interval?: string) {
+        const params = new URLSearchParams({ period });
+        if (interval) params.set('interval', interval);
+        return this.request<{
+            symbol: string;
+            ohlcv: Array<{
+                time: number;
+                open: number;
+                high: number;
+                low: number;
+                close: number;
+                volume: number;
+            }>;
+            count: number;
+        }>(`/api/charts/${encodeURIComponent(symbol)}/ohlcv?${params.toString()}`);
+    }
+
+    /**
+     * Fetch pre-computed technical indicators (EMA, RSI, ADX).
+     */
+    async getChartIndicators(symbol: string, period: string = '1Y') {
+        return this.request<{
+            ema_50: Array<{ time: number; value: number }>;
+            ema_100: Array<{ time: number; value: number }>;
+            rsi_14: Array<{ time: number; value: number }>;
+            adx_14: Array<{ time: number; value: number }>;
+            support: number;
+            resistance: number;
+            prev_close: number;
+        }>(`/api/charts/${encodeURIComponent(symbol)}/indicators?period=${period}`);
+    }
+
+    /**
+     * Fetch stock summary for chart header display.
+     */
+    async getChartSummary(symbol: string) {
+        return this.request<{
+            symbol: string;
+            company_name: string;
+            current_price: number;
+            prev_close: number;
+            day_high: number;
+            day_low: number;
+            week_52_high: number;
+            week_52_low: number;
+            market_cap: number;
+            pe_ratio: number;
+            sector: string;
+            volume: number;
+        }>(`/api/charts/${encodeURIComponent(symbol)}/summary`);
+    }
+
+    /**
+     * Batch live prices from Groww/yfinance via backend.
+     */
+    async getChartLivePrices(symbols: string[]) {
+        return this.request<{ prices: Record<string, number> }>(
+            `/api/charts/prices/live?symbols=${symbols.join(',')}`
+        );
     }
 }
 

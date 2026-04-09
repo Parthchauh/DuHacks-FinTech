@@ -25,6 +25,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "./api";
+import { parseGrowwPrice } from "./utils";
 
 // Types
 export interface Asset {
@@ -68,6 +69,15 @@ export interface Trade {
     trade_amount: number;
     shares: number;
     reason: string;
+}
+
+export interface OHLCVBar {
+    time: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
 }
 
 export interface PortfolioMetrics {
@@ -128,6 +138,13 @@ interface PortfolioState {
     isRebalancing: boolean;
     trades: Trade[];
     error: string | null;
+    notificationCount: number;
+    
+    // Chart State
+    prices: Record<string, number>;
+    priceHistory: Record<string, number[]>;
+    ohlcvCache: Record<string, { data: OHLCVBar[]; fetchedAt: number }>;
+    chartSymbol: string | null;
     
     // Actions
     setUser: (user: UserProfile | null) => void;
@@ -137,7 +154,7 @@ interface PortfolioState {
     login: (email: string, password: string, captcha_token?: string, captcha_answer?: string) => Promise<boolean>;
     verifyMfa: (otp: string) => Promise<boolean>;
     googleLogin: (idToken: string) => Promise<boolean>;
-    register: (name: string, email: string, password: string) => Promise<boolean>;
+    register: (name: string, email: string, password: string, riskProfile?: string) => Promise<boolean>;
     logout: () => void;
     deleteAccount: () => Promise<boolean>;
     fetchUser: () => Promise<void>;
@@ -159,6 +176,12 @@ interface PortfolioState {
     // Rebalancing Actions
     generateRebalancingPlan: () => Promise<void>;
     executeTrades: () => Promise<boolean>;
+    
+    // Chart Actions
+    setPriceFromGroww: (rawString: string) => void;
+    setOHLCVCache: (symbol: string, data: OHLCVBar[]) => void;
+    getOHLCVCache: (symbol: string) => OHLCVBar[] | null;
+    setChartSymbol: (symbol: string | null) => void;
     
     // Utility
     resetError: () => void;
@@ -182,6 +205,11 @@ export const usePortfolioStore = create<PortfolioState>()(
             isRebalancing: false,
             trades: [],
             error: null,
+            notificationCount: 0,
+            prices: {},
+            priceHistory: {},
+            ohlcvCache: {},
+            chartSymbol: null,
 
             setUser: (user) => set({ user }),
             setAuthenticated: (value) => set({ isAuthenticated: value }),
@@ -265,14 +293,30 @@ export const usePortfolioStore = create<PortfolioState>()(
                 }
             },
 
-            register: async (name, email, password) => {
+            register: async (name, email, password, riskProfile = 'moderate') => {
                 set({ isLoading: true, error: null });
                 try {
-                    await api.register({ email, password, full_name: name });
-                    set({ isLoading: false });
+                    const response = await api.register({ email, password, full_name: name, risk_profile: riskProfile });
+                    
+                    // register-and-login returns tokens directly
+                    if (response.access_token) {
+                        const user = await api.getMe();
+                        set({ 
+                            user, 
+                            isAuthenticated: true, 
+                            isLoading: false,
+                            mfaRequired: false,
+                            mfaToken: null,
+                            error: null
+                        });
+                        await get().fetchPortfolios();
+                    } else {
+                        set({ isLoading: false });
+                    }
                     return true;
                 } catch (error: any) {
-                    set({ error: error.detail || 'Registration failed', isLoading: false });
+                    const message = error?.detail || error?.message || 'Registration failed. Please try again.';
+                    set({ error: message, isLoading: false });
                     return false;
                 }
             },
@@ -287,6 +331,11 @@ export const usePortfolioStore = create<PortfolioState>()(
                     holdings: [],
                     metrics: null,
                     trades: [],
+                    // ✅ Fix: clear MFA state on logout
+                    mfaRequired: false,
+                    mfaToken: null,
+                    error: null,
+                    notificationCount: 0,
                 });
             },
 
@@ -332,7 +381,7 @@ export const usePortfolioStore = create<PortfolioState>()(
                         await get().fetchPortfolio(currentId);
                     }
                 } catch (error: any) {
-                    set({ error: error.detail, isLoading: false });
+                    set({ error: error?.detail || error?.message || 'Failed to fetch portfolios', isLoading: false });
                 }
             },
 
@@ -373,27 +422,43 @@ export const usePortfolioStore = create<PortfolioState>()(
             // Holdings Actions
             addHolding: async (holding) => {
                 const { currentPortfolioId } = get();
-                if (!currentPortfolioId) return false;
-                
-                set({ isLoading: true });
+                if (!currentPortfolioId) {
+                    set({ error: 'No portfolio selected. Please select a portfolio first.' });
+                    return false;
+                }
+
+                set({ isLoading: true, error: null });
                 try {
-                    await api.addHolding(currentPortfolioId, {
-                        ticker: holding.ticker,
+                    const response = await api.addHolding(currentPortfolioId, {
+                        ticker: holding.ticker.toUpperCase(),
                         name: holding.name,
                         asset_type: holding.asset_type || 'EQUITY',
-                        quantity: holding.quantity,
-                        avg_buy_price: holding.avg_buy_price,
-                        target_allocation: holding.target_allocation,
+                        quantity: Number(holding.quantity),
+                        avg_buy_price: Number(holding.avg_buy_price),
+                        target_allocation: Number(holding.target_allocation ?? 0),
                     });
-                    
-                    // Refresh portfolio and transactions
+
+                    // CRITICAL FIX: Backend wraps responses in { success, data, error }.
+                    // HTTP status is always 201 even on failure — we MUST check response.success.
+                    // Previously: store assumed success if no HTTP exception → silent failure.
+                    if (response && typeof response === 'object' && 'success' in response) {
+                        if (!response.success) {
+                            const errorMsg = response.error || 'Failed to add holding';
+                            set({ error: errorMsg, isLoading: false });
+                            return false;
+                        }
+                    }
+
+                    // Refresh portfolio and transactions after successful add
                     await Promise.all([
                         get().fetchPortfolio(currentPortfolioId),
-                        get().fetchTransactions()
+                        get().fetchTransactions(),
                     ]);
+                    set({ isLoading: false });
                     return true;
                 } catch (error: any) {
-                    set({ error: error.detail, isLoading: false });
+                    const errorMsg = error?.detail || error?.message || 'Failed to add holding. Please check your inputs.';
+                    set({ error: errorMsg, isLoading: false });
                     return false;
                 }
             },
@@ -477,6 +542,39 @@ export const usePortfolioStore = create<PortfolioState>()(
                 }
             },
 
+            // Chart Actions
+            setPriceFromGroww: (rawString: string) => {
+                const { symbol, price } = parseGrowwPrice(rawString);
+                if (!symbol || isNaN(price)) return;
+                const { prices, priceHistory } = get();
+                const history = priceHistory[symbol] || [];
+                const updatedHistory = [...history, price].slice(-10);
+                set({
+                    prices: { ...prices, [symbol]: price },
+                    priceHistory: { ...priceHistory, [symbol]: updatedHistory },
+                });
+            },
+
+            setOHLCVCache: (symbol: string, data: OHLCVBar[]) => {
+                const { ohlcvCache } = get();
+                set({
+                    ohlcvCache: {
+                        ...ohlcvCache,
+                        [symbol]: { data, fetchedAt: Date.now() },
+                    },
+                });
+            },
+
+            getOHLCVCache: (symbol: string): OHLCVBar[] | null => {
+                const entry = get().ohlcvCache[symbol];
+                if (!entry) return null;
+                const age = Date.now() - entry.fetchedAt;
+                if (age > 5 * 60 * 1000) return null; // 5min TTL
+                return entry.data;
+            },
+
+            setChartSymbol: (symbol: string | null) => set({ chartSymbol: symbol }),
+
             resetError: () => set({ error: null }),
             
             clearState: () => set({
@@ -489,6 +587,10 @@ export const usePortfolioStore = create<PortfolioState>()(
                 transactions: [],
                 trades: [],
                 error: null,
+                prices: {},
+                priceHistory: {},
+                ohlcvCache: {},
+                chartSymbol: null,
             }),
         }),
         {

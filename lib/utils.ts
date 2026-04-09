@@ -18,3 +18,15 @@ export function formatCompactCurrency(amount: number) {
     if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)}L`;
     return formatCurrency(amount);
 }
+
+/**
+ * Parse a Groww feed price string into symbol + numeric price.
+ * Input:  "RELIANCE: Rs.1304.70"
+ * Output: { symbol: "RELIANCE", price: 1304.70 }
+ */
+export function parseGrowwPrice(raw: string): { symbol: string; price: number } {
+    const [symbolPart, pricePart] = raw.split(":");
+    const symbol = symbolPart.trim();
+    const price = parseFloat(pricePart.replace("Rs.", "").trim());
+    return { symbol, price };
+}

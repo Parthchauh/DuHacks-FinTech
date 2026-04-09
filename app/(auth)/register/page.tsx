@@ -3,12 +3,15 @@
 /**
  * OptiWealth Register Page — Dark Vault Theme
  * =============================================
- * Multi-step registration matching the Kinetic Vault design.
- * 4 steps: Account → Goals → Risk Profile → Complete
+ * Multi-step registration with:
+ * - Client-side password validation (matches backend rules)
+ * - Google Sign-In integration
+ * - Specific error messages from backend
+ * - Auto-login after registration
  */
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { usePortfolioStore } from "@/lib/store";
 import { toast } from "sonner";
@@ -29,6 +32,7 @@ import {
     Target,
     Gauge,
     ArrowRight,
+    AlertCircle,
 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -44,34 +48,118 @@ export default function RegisterPage() {
     >("moderate");
     const [isLoading, setIsLoading] = useState(false);
 
-    const { register, error: storeError, resetError } = usePortfolioStore();
+    const {
+        register,
+        googleLogin,
+        isAuthenticated,
+        error: storeError,
+        resetError,
+    } = usePortfolioStore();
     const router = useRouter();
 
-    const passwordValid = password.length >= 8;
-    const passwordsMatch = password === confirmPassword && passwordValid;
-    const emailValid =
-        email === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    const showEmailError =
-        email.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push("/dashboard");
+        }
+    }, [isAuthenticated, router]);
 
+    // Show specific errors from store (backend propagated)
     useEffect(() => {
         if (storeError) {
             toast.error(storeError);
         }
     }, [storeError]);
 
+    // ── Password Validation (matches backend rules exactly) ──
     const passwordChecks = [
-        { label: "Minimum 8 characters", valid: password.length >= 8 },
+        { label: "Min 8 characters", valid: password.length >= 8 },
+        { label: "Uppercase letter", valid: /[A-Z]/.test(password) },
+        { label: "Lowercase letter", valid: /[a-z]/.test(password) },
+        { label: "Contains number", valid: /\d/.test(password) },
         {
-            label: "Contains a number",
-            valid: /\d/.test(password),
-        },
-        {
-            label: "Contains uppercase letter",
-            valid: /[A-Z]/.test(password),
+            label: "Special character",
+            valid: /[!@#$%^&*(),.?":{}|<>]/.test(password),
         },
     ];
 
+    const allPasswordChecksPass = passwordChecks.every((c) => c.valid);
+    const passwordScore = passwordChecks.filter((c) => c.valid).length;
+    const passwordStrength =
+        passwordScore <= 2 ? "weak" : passwordScore <= 4 ? "medium" : "strong";
+    const passwordStrengthColor =
+        passwordStrength === "weak"
+            ? "bg-red-500"
+            : passwordStrength === "medium"
+            ? "bg-amber-500"
+            : "bg-cyan-500";
+
+    const passwordsMatch = password === confirmPassword && allPasswordChecksPass;
+    const emailValid =
+        email === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const showEmailError =
+        email.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    // Step 1 can proceed when all fields are valid
+    const step1Valid =
+        fullName.trim().length >= 2 &&
+        emailValid &&
+        email.length > 0 &&
+        allPasswordChecksPass &&
+        passwordsMatch;
+
+    // ── Google Sign-In ──
+    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+    const handleGoogleCredentialResponse = useCallback(
+        async (response: any) => {
+            setIsLoading(true);
+            resetError();
+            try {
+                const success = await googleLogin(response.credential);
+                if (success) {
+                    toast.success("Google account connected!");
+                    showVaultLoader();
+                }
+            } catch {
+                // Handled by store
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [googleLogin, resetError]
+    );
+
+    useEffect(() => {
+        if (!googleClientId) return;
+
+        const script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+            window.google?.accounts.id.initialize({
+                client_id: googleClientId,
+                callback: handleGoogleCredentialResponse,
+            });
+            const el = document.getElementById("google-signin-register");
+            if (el) {
+                window.google?.accounts.id.renderButton(el, {
+                    theme: "filled_black",
+                    size: "large",
+                    width: "100%",
+                    text: "signup_with",
+                    shape: "pill",
+                });
+            }
+        };
+        document.head.appendChild(script);
+        return () => {
+            document.head.removeChild(script);
+        };
+    }, [googleClientId, handleGoogleCredentialResponse]);
+
+    // ── Vault Loader ──
     const showVaultLoader = () => {
         let timerInterval: ReturnType<typeof setInterval>;
         Swal.fire({
@@ -113,20 +201,24 @@ export default function RegisterPage() {
             return;
         }
 
+        // Client-side validation before submit
+        if (!allPasswordChecksPass) {
+            toast.error(
+                "Password must include uppercase, lowercase, number, and special character"
+            );
+            return;
+        }
+
         setIsLoading(true);
         resetError();
         try {
-            const success = await register(
-                fullName,
-                email,
-                password
-            );
+            const success = await register(fullName, email, password, riskProfile);
             if (success) {
                 toast.success("Vault initialized!");
                 showVaultLoader();
             }
         } catch {
-            // Handled by store
+            // Handled by store — specific error already shown via toast
         } finally {
             setIsLoading(false);
         }
@@ -196,6 +288,22 @@ export default function RegisterPage() {
                 </div>
             </nav>
 
+            {/* ── Error Banner ────────────────────────────────────── */}
+            {storeError && (
+                <div className="relative z-20 mx-auto max-w-xl w-full px-4">
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 mb-2">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        <p className="text-sm">{storeError}</p>
+                        <button
+                            onClick={resetError}
+                            className="ml-auto text-xs text-red-500 hover:text-red-400"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* ── Step Indicator ─────────────────────────────────────── */}
             <div className="relative z-10 flex items-center justify-center gap-4 sm:gap-8 py-4">
                 {[
@@ -255,6 +363,26 @@ export default function RegisterPage() {
                                             continue
                                         </p>
                                     </div>
+
+                                    {/* Google Sign-In */}
+                                    {googleClientId && (
+                                        <div className="space-y-4">
+                                            <div
+                                                id="google-signin-register"
+                                                className="flex justify-center"
+                                            />
+                                            <div className="relative">
+                                                <div className="absolute inset-0 flex items-center">
+                                                    <div className="w-full border-t border-slate-700/50" />
+                                                </div>
+                                                <div className="relative flex justify-center text-xs uppercase">
+                                                    <span className="bg-[#0d1320] px-4 text-slate-500 tracking-widest">
+                                                        or register with email
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="space-y-5">
                                         <div className="space-y-2">
@@ -347,26 +475,87 @@ export default function RegisterPage() {
                                                 </button>
                                             </div>
 
-                                            {/* Password strength */}
+                                            {/* Password Strength Meter */}
                                             {password && (
-                                                <div className="grid grid-cols-3 gap-2 mt-3">
-                                                    {passwordChecks.map(
-                                                        (chk, i) => (
+                                                <div className="space-y-3 mt-3">
+                                                    {/* Strength bar */}
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
                                                             <div
-                                                                key={i}
-                                                                className={`flex items-center gap-1 text-[10px] tracking-wider ${
-                                                                    chk.valid
-                                                                        ? "text-cyan-400"
-                                                                        : "text-slate-600"
-                                                                }`}
-                                                            >
-                                                                <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
-                                                                {chk.label}
-                                                            </div>
-                                                        )
-                                                    )}
+                                                                className={`h-full rounded-full transition-all duration-500 ${passwordStrengthColor}`}
+                                                                style={{
+                                                                    width: `${(passwordScore / 5) * 100}%`,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <span
+                                                            className={`text-[10px] tracking-widest uppercase font-bold ${
+                                                                passwordStrength ===
+                                                                "weak"
+                                                                    ? "text-red-400"
+                                                                    : passwordStrength ===
+                                                                      "medium"
+                                                                    ? "text-amber-400"
+                                                                    : "text-cyan-400"
+                                                            }`}
+                                                        >
+                                                            {passwordStrength}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Individual checks */}
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1.5">
+                                                        {passwordChecks.map(
+                                                            (chk, i) => (
+                                                                <div
+                                                                    key={i}
+                                                                    className={`flex items-center gap-1.5 text-[10px] tracking-wider ${
+                                                                        chk.valid
+                                                                            ? "text-cyan-400"
+                                                                            : "text-slate-600"
+                                                                    }`}
+                                                                >
+                                                                    <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
+                                                                    {chk.label}
+                                                                </div>
+                                                            )
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
+                                        </div>
+
+                                        {/* Confirm Password */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-semibold tracking-widest text-slate-400 uppercase ml-1">
+                                                Confirm Password
+                                            </label>
+                                            <div className="relative">
+                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600" />
+                                                <input
+                                                    type="password"
+                                                    required
+                                                    value={confirmPassword}
+                                                    onChange={(e) =>
+                                                        setConfirmPassword(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    placeholder="••••••••••••"
+                                                    className={`w-full pl-11 pr-4 py-3.5 rounded-xl bg-[#0a0e1a] border ${
+                                                        confirmPassword &&
+                                                        !passwordsMatch
+                                                            ? "border-red-500/50"
+                                                            : "border-slate-700/50 focus:border-cyan-500/50"
+                                                    } focus:ring-2 focus:ring-cyan-500/20 focus:outline-none text-white placeholder:text-slate-600 text-sm transition-all`}
+                                                />
+                                            </div>
+                                            {confirmPassword &&
+                                                password !== confirmPassword && (
+                                                    <p className="text-xs text-red-400 ml-1">
+                                                        Passwords do not match
+                                                    </p>
+                                                )}
                                         </div>
                                     </div>
                                 </>
@@ -521,10 +710,9 @@ export default function RegisterPage() {
                                     type="submit"
                                     disabled={
                                         isLoading ||
-                                        (step === 1 &&
-                                            (!passwordValid || !emailValid))
+                                        (step === 1 && !step1Valid)
                                     }
-                                    className="flex-1 py-3.5 text-sm font-bold tracking-[0.25em] uppercase rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-[#0a0e1a] shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-60"
+                                    className="flex-1 py-3.5 text-sm font-bold tracking-[0.25em] uppercase rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-[#0a0e1a] shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     {isLoading ? (
                                         <Loader2 className="animate-spin mx-auto h-5 w-5" />

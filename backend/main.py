@@ -1,16 +1,18 @@
 """
-OptiWealth Backend - Main Application
-======================================
-FastAPI application with comprehensive security:
+OptiWealth Backend — Main Application
+=======================================
+FastAPI application with:
+- Modern lifespan context manager (replaces deprecated on_event)
 - Security headers (CSP, X-Frame-Options, HSTS)
 - Rate limiting
 - CORS for frontend communication
-- Centralized authentication
-- Scheduled background tasks
+- Global exception handler for unhandled 500s
 """
 
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from database import engine, SessionLocal
 import models
 from routers import auth, portfolio, analytics
@@ -28,13 +30,32 @@ from routers.sector_rotation import router as sector_rotation_router
 from routers.rebalancing import router as rebalancing_router
 from routers.smallcase import router as smallcase_router
 from routers.market_data import router as market_data_router
+from routers.charts import router as charts_router
 from middleware.security import SecurityHeadersMiddleware, RateLimitMiddleware
 from services.scheduler_service import scheduler_service
 from config import get_settings
 
 settings = get_settings()
 
-# Create all database tables including security tables
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Modern FastAPI lifespan handler replacing deprecated @app.on_event."""
+    # ── Startup ──────────────────────────────────────────────────────────────
+    print(f"[STARTUP] {settings.APP_NAME} is starting up...")
+    models.Base.metadata.create_all(bind=engine)
+    print("[SEC] Security features enabled")
+    scheduler_service.start(SessionLocal)
+    print("[SCHEDULER] Background tasks initialized")
+
+    yield  # Application runs here
+
+    # ── Shutdown ─────────────────────────────────────────────────────────────
+    print(f"[SHUTDOWN] {settings.APP_NAME} is shutting down...")
+    scheduler_service.shutdown()
+
+
+# Create all database tables at import time (also done in lifespan for safety)
 models.Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app
@@ -44,8 +65,21 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    openapi_url="/api/openapi.json",
+    lifespan=lifespan,
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch-all handler for unhandled 500 errors — prevents raw tracebacks leaking."""
+    import traceback
+    print(f"[ERROR] Unhandled exception on {request.method} {request.url}:")
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred. Please try again."},
+    )
 
 # Security Headers Middleware (must be added first)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -86,6 +120,7 @@ app.include_router(sector_rotation_router)
 app.include_router(rebalancing_router)
 app.include_router(smallcase_router)
 app.include_router(market_data_router)
+app.include_router(charts_router)
 
 
 @app.get("/")
@@ -93,32 +128,11 @@ async def root():
     return {
         "message": "Welcome to OptiWealth API",
         "documentation": "/api/docs",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
 
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy"}
-
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    print(f"[STARTUP] {settings.APP_NAME} is starting up...")
-    
-    # Initialize DB (create tables)
-    models.Base.metadata.create_all(bind=engine)
-    print(f"[SEC] Security features enabled")
-    
-    # Start background scheduler for automated reports
-    scheduler_service.start(SessionLocal)
-    print(f"[SCHEDULER] Background tasks initialized")
-
-
-# Shutdown event
-@app.on_event("shutdown")
-async def shutdown_event():
-    print(f"[SHUTDOWN] {settings.APP_NAME} is shutting down...")
-    scheduler_service.shutdown()
+    return {"status": "healthy", "version": "1.0.0"}
 

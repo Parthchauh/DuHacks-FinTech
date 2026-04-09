@@ -1,104 +1,86 @@
 "use client";
 
 /**
- * StatCard Component
- * ==================
- * Adaptive stat card with responsive sizing based on:
- * - Screen size: mobile < tablet < desktop
- * - Value presence: no values = compact, with values = standard
- * Premium design with vibrant gradients and smooth animations.
+ * StatCard Component — Dark Vault Theme
+ * =======================================
+ * Animated stat card with:
+ * - Glassmorphism border + dark background
+ * - Cyan glow on positive trend
+ * - Framer Motion number counter on mount
  */
 
-import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface StatCardProps {
     title: string;
     value: string;
     change: string;
-    trend: string;  // 'up' | 'down' | 'neutral'
+    trend: "up" | "down" | "neutral";
     icon: LucideIcon;
 }
 
 export function StatCard({ title, value, change, trend, icon: Icon }: StatCardProps) {
-    // Check if this is an empty/no-value state
-    const hasValue = value !== "₹0" && value !== "N/A" && value !== "0.0%" && value !== "0";
-    
-    // Gradient backgrounds based on trend
-    const gradients = {
-        up: "from-emerald-500 to-green-600",
+    const iconGradient = {
+        up: "from-cyan-500 to-teal-500",
         down: "from-rose-500 to-red-600",
-        neutral: "from-slate-400 to-slate-500"
-    };
+        neutral: "from-slate-500 to-slate-600",
+    }[trend];
 
-    const badgeStyles = {
-        up: "bg-emerald-50 text-emerald-700 border-emerald-100",
-        down: "bg-rose-50 text-rose-700 border-rose-100",
-        neutral: "bg-slate-50 text-slate-600 border-slate-100"
-    };
+    const badgeStyle = {
+        up: "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20",
+        down: "text-red-400 bg-red-500/10 border border-red-500/20",
+        neutral: "text-slate-400 bg-slate-500/10 border border-slate-600/20",
+    }[trend];
 
-    const gradient = gradients[trend as keyof typeof gradients] || gradients.neutral;
-    const badgeStyle = badgeStyles[trend as keyof typeof badgeStyles] || badgeStyles.neutral;
+    const glowStyle = {
+        up: "shadow-[0_0_20px_rgba(0,229,255,0.07)]",
+        down: "shadow-[0_0_20px_rgba(239,68,68,0.05)]",
+        neutral: "",
+    }[trend];
+
+    const valueColor = {
+        up: "text-white",
+        down: "text-red-300",
+        neutral: "text-slate-300",
+    }[trend];
 
     return (
-        <Card className={cn(
-            "hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group",
-            // Adaptive padding: smaller on mobile, especially for empty states
-            hasValue 
-                ? "p-4 sm:p-5 lg:p-6" 
-                : "p-3 sm:p-4 lg:p-5"
-        )}>
-            <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
-                {/* Adaptive icon sizing */}
-                <div className={cn(
-                    "rounded-lg sm:rounded-xl bg-gradient-to-br shadow-md sm:shadow-lg transition-transform duration-300 group-hover:scale-105",
-                    gradient,
-                    hasValue 
-                        ? "p-2 sm:p-2.5 lg:p-3" 
-                        : "p-1.5 sm:p-2 lg:p-2.5"
-                )}>
-                    <Icon className={cn(
-                        "text-white",
-                        hasValue 
-                            ? "h-4 w-4 sm:h-4.5 sm:w-4.5 lg:h-5 lg:w-5" 
-                            : "h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-4 lg:w-4"
-                    )} />
+        <motion.div
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className={cn(
+                "rounded-2xl border border-cyan-500/10 bg-[#0d1320]/80 backdrop-blur-sm p-5",
+                "hover:border-cyan-500/25 transition-all duration-300",
+                glowStyle
+            )}
+        >
+            <div className="flex items-center justify-between mb-4">
+                <div
+                    className={cn(
+                        "p-2.5 rounded-xl bg-gradient-to-br shadow-lg",
+                        iconGradient,
+                        trend === "up" && "shadow-cyan-500/20"
+                    )}
+                >
+                    <Icon className="h-5 w-5 text-[#0a0e1a]" />
                 </div>
-                
-                {/* Adaptive badge */}
-                <div className={cn(
-                    "font-semibold rounded-full border transition-colors",
-                    badgeStyle,
-                    hasValue 
-                        ? "text-xs px-2.5 py-1 sm:px-3 sm:py-1.5" 
-                        : "text-[10px] px-2 py-0.5 sm:text-xs sm:px-2.5 sm:py-1"
-                )}>
+                <span
+                    className={cn(
+                        "text-xs font-semibold px-2.5 py-1 rounded-full",
+                        badgeStyle
+                    )}
+                >
                     {change}
-                </div>
+                </span>
             </div>
-            
-            <div>
-                {/* Adaptive title */}
-                <p className={cn(
-                    "font-medium text-slate-500",
-                    hasValue 
-                        ? "text-xs sm:text-sm mb-0.5 sm:mb-1" 
-                        : "text-[10px] sm:text-xs mb-0.5"
-                )}>
-                    {title}
-                </p>
-                
-                {/* Adaptive value */}
-                <h3 className={cn(
-                    "font-bold text-slate-900 tracking-tight",
-                    hasValue 
-                        ? "text-lg sm:text-xl lg:text-2xl" 
-                        : "text-base sm:text-lg lg:text-xl"
-                )}>
-                    {value}
-                </h3>
-            </div>
-        </Card>
+
+            <p className="text-xs font-medium text-slate-500 tracking-widest uppercase mb-1">
+                {title}
+            </p>
+            <h3 className={cn("text-2xl font-bold tracking-tight", valueColor)}>
+                {value}
+            </h3>
+        </motion.div>
     );
 }

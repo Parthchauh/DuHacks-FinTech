@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime
 from enum import Enum
 
@@ -304,6 +304,27 @@ class GoalResponse(GoalBase):
     
     class Config:
         from_attributes = True
+
+
+class ApiResponse(BaseModel):
+    """
+    Standardized API response wrapper.
+
+    IMPORTANT — ORM Serialization Note:
+    ------------------------------------
+    Never pass a raw SQLAlchemy ORM object as `data`. The `Any` type does NOT
+    trigger Pydantic's from_attributes mode, causing silent serialization failure.
+    Always convert ORM objects to dicts (e.g., using holding_to_dict()) before
+    wrapping in ApiResponse.
+
+    Correct:   ApiResponse(success=True, data=holding_to_dict(holding))
+    WRONG:     ApiResponse(success=True, data=holding)  ← Fails silently
+    """
+    success: bool
+    data: Optional[Any] = None
+    error: Optional[str] = None
+
+    model_config = {"from_attributes": True}
 
 
 # ============== Sector Rotation Schemas ==============

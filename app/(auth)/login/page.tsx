@@ -13,7 +13,7 @@
  */
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePortfolioStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -53,11 +53,71 @@ export default function LoginPage() {
     const {
         login,
         verifyMfa,
+        googleLogin,
+        isAuthenticated,
         mfaRequired,
         error: storeError,
         resetError,
     } = usePortfolioStore();
     const router = useRouter();
+
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push("/dashboard");
+        }
+    }, [isAuthenticated, router]);
+
+    // ── Google Sign-In ──
+    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+    const handleGoogleCredentialResponse = useCallback(
+        async (response: any) => {
+            setIsLoading(true);
+            resetError();
+            try {
+                const success = await googleLogin(response.credential);
+                if (success) {
+                    toast.success("Google authentication successful!");
+                    showDashboardLoader();
+                }
+            } catch {
+                // Handled by store
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [googleLogin, resetError]
+    );
+
+    useEffect(() => {
+        if (!googleClientId) return;
+
+        const script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+            window.google?.accounts.id.initialize({
+                client_id: googleClientId,
+                callback: handleGoogleCredentialResponse,
+            });
+            const el = document.getElementById("google-signin-login");
+            if (el) {
+                window.google?.accounts.id.renderButton(el, {
+                    theme: "filled_black",
+                    size: "large",
+                    width: "100%",
+                    text: "signin_with",
+                    shape: "pill",
+                });
+            }
+        };
+        document.head.appendChild(script);
+        return () => {
+            document.head.removeChild(script);
+        };
+    }, [googleClientId, handleGoogleCredentialResponse]);
 
     useEffect(() => {
         if (storeError) {
@@ -402,10 +462,18 @@ export default function LoginPage() {
                                 </div>
                                 <div className="relative flex justify-center text-xs uppercase">
                                     <span className="bg-[#0d1320] px-3 text-slate-500 tracking-widest">
-                                        Or
+                                        or continue with
                                     </span>
                                 </div>
                             </div>
+
+                            {/* Google Sign-In */}
+                            {googleClientId && (
+                                <div
+                                    id="google-signin-login"
+                                    className="flex justify-center"
+                                />
+                            )}
 
                             {/* Register Link */}
                             <p className="text-center text-sm text-slate-500">
